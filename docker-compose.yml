@@ -1,0 +1,119 @@
+version: "3"
+services:
+  ms-postgres:
+    image: postgres
+    container_name: ms-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=123456
+    networks:
+      - micronaut-net
+
+  ms-redis:
+    image: redis
+    container_name: ms-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - micronaut-net
+
+  ms-mongo:
+    image: mongo
+    container_name: ms-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=e296cd9f
+    networks:
+      - micronaut-net
+
+  ms-zookeeper:
+    image: zookeeper
+    container_name: ms-zookeeper
+    restart: always
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - micronaut-net
+
+  ms-kafka:
+    image: bitnami/kafka:latest
+    depends_on:
+      - ms-zookeeper
+    container_name: ms-kafka
+    restart: always
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=ms-zookeeper:2181
+    networks:
+      - micronaut-net
+
+  ms-consul:
+    image: consul
+    container_name: ms-consul
+    restart: always
+    ports:
+      - 8500
+    networks:
+      - micronaut-net
+
+  ms-api-gateway:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./api-gateway
+    image: api-gateway
+    container_name: ms-api-gateway
+    restart: always
+    ports:
+      - "9090:9090"
+    networks:
+      - micronaut-net
+
+  ms-veiculo-service:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./veiculo-service
+    image: veiculo-service
+    container_name: ms-veiculo-service
+    restart: always
+    depends_on:
+      - ms-postgres
+      - ms-consul
+    networks:
+      - micronaut-net
+
+  ms-loja-service:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./loja-service
+    image: loja-service
+    container_name: ms-loja-service
+    restart: always
+    depends_on:
+      - ms-kafka
+      - ms-consul
+    networks:
+      - micronaut-net
+
+  ms-relatorio-service:
+    build:
+      dockerfile: ./Dockerfile
+      context: ./relatorio-service
+    image: relatorio-service
+    container_name: ms-relatorio-service
+    restart: always
+    depends_on:
+      - ms-mongo
+      - ms-consul
+      - ms-kafka
+    networks:
+      - micronaut-net
+
+networks:
+  micronaut-net :
+    driver: bridge
